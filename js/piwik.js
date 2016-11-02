@@ -27,7 +27,7 @@
  */
 
 /*global JSON2:true */
-
+console.log('Piwik loading modified version anstue');
 if (typeof JSON2 !== 'object' && typeof window.JSON === 'object' && window.JSON.stringify && window.JSON.parse) {
     JSON2 = window.JSON;
 } else {
@@ -3358,43 +3358,31 @@ if (typeof window.Piwik !== 'object') {
             }
 
             /*
-             * POST request to Piwik server using XMLHttpRequest.
+             * GET request to Piwik server using XMLHttpRequest.
              */
             function sendXmlHttpRequest(request, callback, fallbackToGet) {
-                if (!isDefined(fallbackToGet) || null === fallbackToGet) {
-                    fallbackToGet = true;
-                }
-
-                try {
-                    // we use the progid Microsoft.XMLHTTP because
-                    // IE5.5 included MSXML 2.5; the progid MSXML2.XMLHTTP
-                    // is pinned to MSXML2.XMLHTTP.3.0
-                    var xhr = windowAlias.XMLHttpRequest
+				var xhr = windowAlias.XMLHttpRequest
                         ? new windowAlias.XMLHttpRequest()
                         : windowAlias.ActiveXObject
                         ? new ActiveXObject('Microsoft.XMLHTTP')
                         : null;
+				console.log('Piwik: xhr loaded');
+                xhr.open('GET', configTrackerUrl + (configTrackerUrl.indexOf('?') < 0 ? '?' : '&') + request, true);		
+						
+				// fallback on error
+				xhr.onreadystatechange = function () {
+					clearTimeout(xhrHttpTimeout);
+					if (this.readyState === 4 && (typeof callback === 'function')) { callback(); }
+				};
 
-                    xhr.open('POST', configTrackerUrl, true);
-
-                    // fallback on error
-                    xhr.onreadystatechange = function () {
-                        if (this.readyState === 4 && !(this.status >= 200 && this.status < 300) && fallbackToGet) {
-                            getImage(request, callback);
-                        } else {
-                            if (this.readyState === 4 && (typeof callback === 'function')) { callback(); }
-                        }
-                    };
-
-                    xhr.setRequestHeader('Content-Type', configRequestContentType);
-
-                    xhr.send(request);
-                } catch (e) {
-                    if (fallbackToGet) {
-                        // fallback
-                        getImage(request, callback);
-                    }
-                }
+				xhr.setRequestHeader('Content-Type', configRequestContentType);
+				console.log('Piwik: xhr sending');
+				xhr.send('');
+				var xhrHttpTimeout=setTimeout(xhrAbort, 3000);
+				function xhrAbort() {
+					xhr.abort();
+					console.log('Piwik: abort xhr');
+				}
             }
 
             function setExpireDateTime(delay) {
@@ -3526,12 +3514,7 @@ if (typeof window.Piwik !== 'object') {
             function sendRequest(request, delay, callback) {
                 if (!configDoNotTrack && request) {
                     makeSureThereIsAGapAfterFirstTrackingRequestToPreventMultipleVisitorCreation(function () {
-                        if (configRequestMethod === 'POST') {
-                            sendXmlHttpRequest(request, callback);
-                        } else {
-                            getImage(request, callback);
-                        }
-
+                        sendXmlHttpRequest(request, callback);
                         setExpireDateTime(delay);
                     });
                 }
